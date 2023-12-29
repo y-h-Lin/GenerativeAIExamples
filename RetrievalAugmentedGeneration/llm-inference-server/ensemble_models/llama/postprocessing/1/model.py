@@ -16,10 +16,10 @@
 
 import json
 import os
-
+import logging
 import numpy as np
 import triton_python_backend_utils as pb_utils
-from transformers import LlamaTokenizer
+from transformers import LlamaTokenizer, AutoTokenizer
 
 TOKENIZER_DIR = os.environ.get("TOKENIZER_DIR", "/model")
 
@@ -32,7 +32,7 @@ class TritonPythonModel:
     """Your Python model must use the same class name. Every Python model
     that is created must have "TritonPythonModel" as the class name.
     """
-
+    
     def initialize(self, args):
         """`initialize` is called only once when the model is being loaded.
         Implementing `initialize` function is optional. This function allows
@@ -49,7 +49,6 @@ class TritonPythonModel:
           * model_name: Model name
         """
         self.cumList = []
-        
         # Parse model configs
         self.model_config = model_config = json.loads(args["model_config"])
 
@@ -59,7 +58,7 @@ class TritonPythonModel:
         # Convert Triton types to numpy types
         self.output_dtype = pb_utils.triton_string_to_numpy(output_config["data_type"])
 
-        self.tokenizer = LlamaTokenizer.from_pretrained(TOKENIZER_DIR, legacy=False)
+        self.tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_DIR, legacy=False)
         vocab = self.tokenizer.convert_ids_to_tokens(
             list(range(self.tokenizer.vocab_size))
         )
@@ -85,7 +84,6 @@ class TritonPythonModel:
         """
 
         responses = []
-
         # Every Python backend must iterate over everyone of the requests
         # and create a pb_utils.InferenceResponse for each of them.
         for request in requests:
@@ -130,10 +128,6 @@ class TritonPythonModel:
         """
         pb_utils.Logger.log("Finalizing the Post-Processing Model.")
 
-    def hex_to_word(self, tokens):
-        
-        
-        
     def _id_to_token(self, token_id):
         # handle special tokens (end of string, unknown, etc)
         try:
@@ -144,22 +138,41 @@ class TritonPythonModel:
 
         # handle typical tokens
         tokens = self.tokenizer.convert_ids_to_tokens(token_id)
-        
+
         if len(tokens) == 6 and tokens[0] == "<":
             self.cumList.append(tokens)
             if len(self.cumList) == 3:
                 hex_txt = "".join(self.cumList)
                 self.cumList = []
-                hex_txt = str.encode(hex_txt.replace("<0","\\").replace(">","")).decode("utf-8")
+                hex_txt = bytes.fromhex(hex_txt.replace("<0x","").replace(">","")).decode("utf-8")
                 return f"{hex_txt}"
             return ""
-                
-                
+            
         if ord(tokens[0]) == SPACE_CHAR:
+            self.cumList = []
             return f" {tokens[1:]}"
+
         if ord(tokens[0]) == NEWLINE_CHAR:
+            self.cumList = []
             return "\n"
+
+        self.cumList = []
         return tokens
+    
+
+    def _postprocessing_stream_full(self, tokens_batch, outputs):
+        outputs_decoded = []
+        tokens_batch = tokens_batch.tolist()
+        token_ids = tokens_batch[0][0]
+        outputs.extend(token_ids)
+        self._decode(outputs, outputs_decoded)
+        return outputs_decoded
+
+    def _decode(self, outputs, outputs_decoded):
+        decoded = self.tokenizer.decode(outputs)
+        decoded = decoded.replace("�", "").strip()
+        outputs_decoded.append(decoded)
+
 
     def _postprocessing(self, tokens_batch):
         tokens_batch = tokens_batch.tolist()
@@ -169,7 +182,7 @@ class TritonPythonModel:
             for token_ids in beam_tokens
             for token_id in token_ids
         ]
-
+#            for token_id in token_ids
         # for beam_tokens in tokens_batch:
         #     for token_ids in beam_tokens:
         #         for token_id in token_ids:
