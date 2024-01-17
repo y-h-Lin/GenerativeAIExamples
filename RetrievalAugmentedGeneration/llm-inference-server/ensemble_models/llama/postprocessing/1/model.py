@@ -144,7 +144,8 @@ class TritonPythonModel:
             if len(self.cumList) == 3:
                 hex_txt = "".join(self.cumList)
                 self.cumList = []
-                hex_txt = bytes.fromhex(hex_txt.replace("<0x","").replace(">","")).decode("utf-8")
+                # hex_txt = bytes.fromhex(hex_txt.replace("<0x","").replace(">","")).decode("utf-8")
+                hex_txt = self.tokenizer.convert_tokens_to_string(self.cumList)
                 return f"{hex_txt}"
             return ""
             
@@ -160,20 +161,6 @@ class TritonPythonModel:
         return tokens
     
 
-    def _postprocessing_stream_full(self, tokens_batch, outputs):
-        outputs_decoded = []
-        tokens_batch = tokens_batch.tolist()
-        token_ids = tokens_batch[0][0]
-        outputs.extend(token_ids)
-        self._decode(outputs, outputs_decoded)
-        return outputs_decoded
-
-    def _decode(self, outputs, outputs_decoded):
-        decoded = self.tokenizer.decode(outputs)
-        decoded = decoded.replace("�", "").strip()
-        outputs_decoded.append(decoded)
-
-
     def _postprocessing(self, tokens_batch):
         tokens_batch = tokens_batch.tolist()
         return [
@@ -182,7 +169,7 @@ class TritonPythonModel:
             for token_ids in beam_tokens
             for token_id in token_ids
         ]
-#            for token_id in token_ids
+
         # for beam_tokens in tokens_batch:
         #     for token_ids in beam_tokens:
         #         for token_id in token_ids:
