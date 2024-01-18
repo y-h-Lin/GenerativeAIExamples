@@ -142,10 +142,11 @@ class TritonPythonModel:
         if len(tokens) == 6 and tokens[0] == "<":
             self.cumList.append(tokens)
             if len(self.cumList) == 3:
-                hex_txt = "".join(self.cumList)
+                # hex_txt = "".join(self.cumList)
+                hex_txt = self.tokenizer.convert_tokens_to_string(self.cumList)
                 self.cumList = []
                 # hex_txt = bytes.fromhex(hex_txt.replace("<0x","").replace(">","")).decode("utf-8")
-                hex_txt = self.tokenizer.convert_tokens_to_string(self.cumList)
+                
                 return f"{hex_txt}"
             return ""
             

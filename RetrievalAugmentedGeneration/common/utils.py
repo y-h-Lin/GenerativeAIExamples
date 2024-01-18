@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_CONTEXT = 1500
 DEFAULT_NUM_TOKENS = 150
-TEXT_SPLITTER_EMBEDDING_MODEL = "intfloat/e5-large-v2"
+TEXT_SPLITTER_EMBEDDING_MODEL = "intfloat/multilingual-e5-large"
 
 
 class LimitRetrievedNodesLength(BaseNodePostprocessor):

@@ -41,7 +41,7 @@ text_splitter:
 embeddings:
   # The configuration embedding models.
 
-  model_name: intfloat/e5-large-v2
+  model_name: intfloat/multilingual-e5-large
   # The name embedding search model from huggingface or ai-playground.
   # Type: str
 
